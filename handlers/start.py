@@ -133,41 +133,19 @@ async def process_main_menu_callback(callback: CallbackQuery, state: FSMContext,
     # Устанавливаем состояние главного меню
     await state.set_state(MainMenu.menu)
     
-    # Отправляем сообщение с клавиатурой главного меню
-    if user.language_code == 'ru':
-        await callback.message.edit_text(
-            "Главное меню:",
-            reply_markup=get_main_menu_keyboard(user.language_code)
-        )
-    else:
-        await callback.message.edit_text(
-            "Main Menu:",
-            reply_markup=get_main_menu_keyboard(user.language_code)
-        )
+    # Получаем полное приветственное сообщение
+    welcome_message = await get_welcome_message(user.language_code)
+    
+    # Отправляем полное приветственное сообщение с клавиатурой главного меню
+    await callback.message.edit_text(
+        welcome_message,
+        reply_markup=get_main_menu_keyboard(user.language_code)
+    )
     
     await callback.answer()
 
 
-@router.callback_query(F.data == "buy_esim")
-async def process_buy_esim_callback(callback: CallbackQuery, state: FSMContext):
-    """Обработчик нажатия на кнопку 'Купить eSIM'"""
-    # Устанавливаем состояние выбора страны
-    await state.set_state(BuyESim.select_country)
-    
-    # Здесь будет переход к выбору страны
-    # Реализация будет в отдельном файле handlers/buy_esim.py
-    if callback.from_user.language_code == 'ru':
-        await callback.message.edit_text(
-            "Выберите страну для покупки eSIM:",
-            reply_markup=None  # Здесь будет клавиатура со странами
-        )
-    else:
-        await callback.message.edit_text(
-            "Select a country for your eSIM:",
-            reply_markup=None  # Здесь будет клавиатура со странами
-        )
-    
-    await callback.answer()
+# Обработчик нажатия на кнопку 'Купить eSIM' перенесен в handlers/catalog.py
 
 
 @router.callback_query(F.data == "account")

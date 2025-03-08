@@ -86,8 +86,16 @@ async def get_package_by_id(session: AsyncSession, package_id: int) -> Package:
 
 async def get_package_by_code(session: AsyncSession, package_code: str) -> Package:
     """Получение пакета по коду"""
-    result = await session.execute(select(Package).where(Package.package_code == package_code))
-    return result.scalars().first()
+    try:
+        if not package_code:
+            logger.warning(f"Попытка получить пакет с пустым кодом")
+            return None
+            
+        result = await session.execute(select(Package).where(Package.package_code == package_code))
+        return result.scalars().first()
+    except Exception as e:
+        logger.error(f"Ошибка при получении пакета по коду {package_code}: {e}")
+        return None
 
 async def get_package_by_slug(session: AsyncSession, slug: str) -> Package:
     """Получение пакета по slug"""

@@ -37,6 +37,7 @@ pillow==11.1.0
 propcache==0.2.1
 psutil==6.1.1
 psycopg2-binary==2.9.9
+pycountry==23.12.11
 pydantic==2.10.4
 pydantic_core==2.27.2
 pyparsing==3.2.1

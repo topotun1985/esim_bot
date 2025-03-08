@@ -29,6 +29,7 @@ services:
       - ./scripts:/app/scripts
       - ./monitoring:/app/monitoring
       - ./handlers:/app/handlers
+      - ./services:/app/services
     ports:
       - "9091:9091"
     depends_on:

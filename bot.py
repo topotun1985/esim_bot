@@ -13,7 +13,9 @@ from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
 
 from handlers.start import router as start_router
+from handlers.catalog import router as catalog_router
 from database.models import Base
+from services.esim_service import esim_service
 
 from contextlib import suppress
 
@@ -176,14 +178,88 @@ async def main():
         
         # Регистрируем роутеры
         dp.include_router(start_router)
+        dp.include_router(catalog_router)
         # Здесь можно добавить другие роутеры, когда они будут созданы
         # dp.include_router(account_router)
-        # dp.include_router(buy_esim_router)
         # dp.include_router(support_router)
         # dp.include_router(admin_router)
         
         # Установка команд бота
         await set_bot_commands(bot)
+        
+        # Синхронизация данных стран и пакетов из API
+        async with session_pool() as session:
+            logger.info("🔄 Начинаем синхронизацию стран и пакетов из API...")
+            
+            # Сначала синхронизируем только страны
+            from database.queries import get_all_countries
+            
+            # Пробуем синхронизировать страны с несколькими попытками
+            max_attempts = 3
+            attempt = 1
+            success = False
+            
+            while attempt <= max_attempts and not success:
+                try:
+                    logger.info(f"Синхронизация стран: попытка {attempt} из {max_attempts}")
+                    success = await esim_service.sync_countries_and_packages(session, sync_packages=False)
+                    
+                    if success:
+                        logger.info("✅ Синхронизация стран завершена успешно!")
+                        break
+                    else:
+                        logger.warning(f"⚠️ Попытка {attempt} синхронизации стран не удалась")
+                except Exception as e:
+                    logger.error(f"❌ Ошибка при синхронизации стран (попытка {attempt}): {e}")
+                
+                attempt += 1
+                if attempt <= max_attempts and not success:
+                    # Ждем перед следующей попыткой
+                    logger.info(f"⏳ Ожидание перед попыткой {attempt}...")
+                    await asyncio.sleep(3)
+            
+            # Теперь синхронизируем пакеты для всех стран из базы данных
+            countries = await get_all_countries(session)
+            logger.info(f"🌎 В базе данных {len(countries)} стран")
+            
+            # Синхронизируем пакеты для каждой страны
+            total_packages = 0
+            countries_with_packages = 0
+            countries_processed = 0
+            
+            for country in countries:
+                countries_processed += 1
+                logger.info(f"🔄 Синхронизация пакетов для страны {country.code} ({countries_processed}/{len(countries)})")
+                
+                # Синхронизируем пакеты для текущей страны
+                packages_success = await esim_service.sync_packages_for_country(session, country)
+                
+                # Проверяем результаты синхронизации для этой страны
+                from database.queries import get_packages_by_country
+                packages = await get_packages_by_country(session, country.id)
+                total_packages += len(packages)
+                
+                if len(packages) > 0:
+                    countries_with_packages += 1
+                    logger.info(f"✅ Получено {len(packages)} пакетов для страны {country.code}")
+                else:
+                    logger.warning(f"⚠️ Нет пакетов для страны {country.code}")
+            
+            logger.info(f"💾 Всего в базе данных {total_packages} пакетов для {countries_with_packages} стран")
+                        break
+                    else:
+                        logger.warning(f"⚠️ Попытка {attempt} синхронизации не удалась")
+                except Exception as e:
+                    logger.error(f"❌ Ошибка при синхронизации (попытка {attempt}): {e}")
+                
+                attempt += 1
+                if attempt <= max_attempts and not success:
+                    # Ждем перед следующей попыткой
+                    logger.info(f"⏳ Ожидание перед попыткой {attempt}...")
+                    await asyncio.sleep(3)
+            
+            if not success:
+                logger.error("❌ Все попытки синхронизации завершились неудачей")
         
         # Запуск бота
         logger.info("Starting bot")
