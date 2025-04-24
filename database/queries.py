@@ -80,8 +80,12 @@ async def get_packages_by_country(session: AsyncSession, country_id: int, availa
     return result.scalars().all()
 
 async def get_package_by_id(session: AsyncSession, package_id: int) -> Package:
-    """Получение пакета по ID"""
-    result = await session.execute(select(Package).where(Package.id == package_id))
+    """Получение пакета по ID с загрузкой связанной страны"""
+    result = await session.execute(
+        select(Package)
+        .where(Package.id == package_id)
+        .options(joinedload(Package.country))
+    )
     return result.scalars().first()
 
 async def get_package_by_code(session: AsyncSession, package_code: str) -> Package:

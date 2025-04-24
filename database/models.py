@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, Text, BigInteger, JSON, Enum, Table, MetaData
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, Text, BigInteger, JSON, Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 import enum
@@ -35,6 +35,7 @@ class Country(Base):
     id = Column(Integer, primary_key=True)
     code = Column(String(10), unique=True, nullable=False)  # Country code (e.g., US, GB)
     name = Column(String(255), nullable=False)  # Country name
+    name_ru = Column(String(255), nullable=True)  # Country name in Russian
     flag_emoji = Column(String(10), nullable=True)  # Flag emoji (e.g., 🇺🇸)
     is_available = Column(Boolean, default=True)
     
@@ -56,9 +57,11 @@ class Package(Base):
     name = Column(String(255), nullable=False)  # Package name
     data_amount = Column(Float, nullable=False)  # Amount of data in GB
     duration = Column(Integer, nullable=False)  # Duration in days
-    price = Column(Float, nullable=False)  # Price in USD
+    price = Column(Float, nullable=False)  # Price in USD (wholesale price from provider)
+    retail_price = Column(Float, nullable=True)  # Our retail price in USD
     description = Column(Text, nullable=True)  # Package description
     is_available = Column(Boolean, default=True)
+    last_synced_at = Column(DateTime, nullable=True)  # Timestamp of last sync
     
     # Relationships
     country = relationship("Country", back_populates="packages")
@@ -77,6 +80,12 @@ class OrderStatus(enum.Enum):
     COMPLETED = "completed"  # Заказ выполнен, eSIM предоставлена
     FAILED = "failed"  # Произошла ошибка при обработке заказа
     CANCELED = "canceled"  # Заказ отменен
+
+
+class OrderType(enum.Enum):
+    """Enum for order types"""
+    NEW = "new"  # Заказ на новую eSIM
+    TOPUP = "topup"  # Заказ на пополнение трафика существующей eSIM
 
 
 class PaymentMethod(enum.Enum):
@@ -98,8 +107,12 @@ class Order(Base):
     transaction_id = Column(String(255), unique=True, nullable=False)  # Уникальный ID для API-провайдера
     order_no = Column(String(255), unique=True, nullable=True)  # Номер заказа от провайдера
     status = Column(String(50), default=OrderStatus.CREATED.value)
+    order_type = Column(String(50), default=OrderType.NEW.value)
     payment_method = Column(String(50), nullable=True)  # Метод оплаты
     payment_id = Column(String(255), nullable=True)  # ID платежа от платежной системы
+    invoice_id = Column(String(255), nullable=True)  # ID инвойса от CryptoBot/Cryptomus
+    payment_details = Column(Text, nullable=True)  # Детали платежа в JSON формате
+    paid_at = Column(DateTime, nullable=True)  # Дата и время оплаты
     amount = Column(Float, nullable=False)  # Сумма в USD
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

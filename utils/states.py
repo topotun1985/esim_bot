@@ -8,6 +8,7 @@ class MainMenu(StatesGroup):
 class BuyESim(StatesGroup):
     """Состояния для процесса покупки eSIM"""
     select_country = State()  # Выбор страны
+    select_duration = State()  # Выбор длительности пакета
     select_package = State()  # Выбор тарифного плана
     confirm_purchase = State()  # Подтверждение покупки
     select_payment = State()  # Выбор метода оплаты
@@ -55,6 +56,7 @@ class CallbackData(Enum):
     """Enum для данных в callback_data"""
     COUNTRY = 'country'  # Идентификатор страны
     PACKAGE = 'package'  # Идентификатор пакета
+    DURATION = 'duration'  # Длительность пакета в днях
     ORDER = 'order'  # Идентификатор заказа
     PAYMENT = 'payment'  # Метод оплаты
     FAQ = 'faq'  # Идентификатор FAQ
@@ -64,3 +66,24 @@ class CallbackData(Enum):
     CONFIRM = 'confirm'  # Кнопка "подтвердить"
     LANGUAGE = 'language'  # Выбор языка
     PAGE = 'page'  # Номер страницы для пагинации
+
+
+class PaymentState(StatesGroup):
+    """Состояния для процесса оплаты"""
+    select_method = State()  # Выбор способа оплаты
+    ton_payment = State()    # Оплата через TON (CryptoBot)
+    crypto_payment = State()  # Оплата через Cryptomus
+    awaiting_payment = State()  # Ожидание подтверждения оплаты
+
+class TopUpESim(StatesGroup):
+    """Состояния для пополнения трафика eSIM"""
+    select_duration = State()  # Выбор длительности пакета
+    select_package = State()  # Выбор пакета для пополнения
+    confirm_payment = State()  # Подтверждение оплаты
+    select_payment = State()  # Выбор способа оплаты
+
+class SMSMenu(StatesGroup):
+    """Состояния для меню отправки SMS"""
+    select_esim = State()      # Выбор eSIM для отправки
+    enter_message = State()    # Ввод текста сообщения
+    confirm_send = State()     # Подтверждение отправки
